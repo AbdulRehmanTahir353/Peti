@@ -1,0 +1,2208 @@
+This file is a merged representation of a subset of the codebase, containing specifically included files, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Only files matching these patterns are included: src/main/**
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+<additional_info>
+
+</additional_info>
+
+</file_summary>
+
+<directory_structure>
+src/main/java/com/peti/config/MyConfig.java
+src/main/java/com/peti/config/SecurityConfig.java
+src/main/java/com/peti/constants/Role.java
+src/main/java/com/peti/controller/AuthController.java
+src/main/java/com/peti/controller/WardrobeController.java
+src/main/java/com/peti/model/ClothingItem.java
+src/main/java/com/peti/model/ErrorResponse.java
+src/main/java/com/peti/model/LoggedInUser.java
+src/main/java/com/peti/model/Outfit.java
+src/main/java/com/peti/model/UsageLog.java
+src/main/java/com/peti/model/User.java
+src/main/java/com/peti/PetiApplication.java
+src/main/java/com/peti/repository/ClothingItemRepository.java
+src/main/java/com/peti/repository/OutfitRepository.java
+src/main/java/com/peti/repository/UsageLogRepository.java
+src/main/java/com/peti/repository/UserRepository.java
+src/main/java/com/peti/security/CustomUserDetailsService.java
+src/main/java/com/peti/security/JwtAuthenticationEntryPoint.java
+src/main/java/com/peti/security/JwtAuthenticationFilter.java
+src/main/java/com/peti/security/JwtHelper.java
+src/main/java/com/peti/security/model/LoginRequest.java
+src/main/java/com/peti/service/AuthService.java
+src/main/java/com/peti/service/UserService.java
+src/main/java/com/peti/service/WardrobeService.java
+src/main/resources/application.properties
+src/main/resources/templates/dashboard.html
+src/main/resources/templates/layout.html
+src/main/resources/templates/login.html
+src/main/resources/templates/register.html
+src/main/resources/templates/upload.html
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="src/main/java/com/peti/config/MyConfig.java">
+package com.peti.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+@Configuration
+@EnableJpaAuditing
+public class MyConfig
+{
+    @Bean
+    public PasswordEncoder passwordEncoder()
+    {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration builder) throws Exception
+    {
+        return builder.getAuthenticationManager();
+    }
+}
+</file>
+
+<file path="src/main/java/com/peti/config/SecurityConfig.java">
+package com.peti.config;
+
+
+import com.peti.security.JwtAuthenticationEntryPoint;
+import com.peti.security.JwtAuthenticationFilter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+
+@Configuration
+@EnableMethodSecurity
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Autowired
+    private JwtAuthenticationEntryPoint point;
+    @Autowired
+    private JwtAuthenticationFilter filter;
+
+    @Autowired
+    private UserDetailsService userDetailsService;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http.csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Use custom CORS configuration
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                        .requestMatchers("/api/**").authenticated()
+                        .requestMatchers("/**").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(point))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        http.addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
+        return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:8080")); // Frontend origin
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS")); // Allow necessary methods
+        configuration.setAllowedHeaders(Arrays.asList("*")); // Allow all headers
+        configuration.setAllowCredentials(true); // Allow credentials (important for WebSocket)
+        configuration.setMaxAge(3600L); // Cache preflight response for 1 hour
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration); // Apply to all endpoints
+        return source;
+    }
+
+    @Bean
+    public DaoAuthenticationProvider daoAuthenticationProvider() {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+        return provider;
+    }
+}
+</file>
+
+<file path="src/main/java/com/peti/constants/Role.java">
+package com.peti.constants;
+
+public enum Role {
+        USER, ADMIN
+    }
+</file>
+
+<file path="src/main/java/com/peti/controller/AuthController.java">
+package com.peti.controller;
+
+import com.peti.model.ErrorResponse;
+import com.peti.model.LoggedInUser;
+import com.peti.model.User;
+import com.peti.security.JwtHelper;
+import com.peti.security.model.LoginRequest;
+import com.peti.service.AuthService;
+import com.peti.service.UserService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.*;
+
+
+
+@Controller
+@RequiredArgsConstructor
+@Slf4j
+@RequestMapping("/api/auth")
+public class AuthController {
+    @Autowired
+    private JwtHelper helper;
+    private final UserDetailsService userDetailsService;
+    @Autowired
+    private AuthenticationManager manager;
+    @Autowired
+    private AuthService authService;
+    private Logger logger = LoggerFactory.getLogger(AuthController.class);
+    //    private final JwtService jwtService;
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody User user) {
+        authService.register(user);
+        return ResponseEntity.ok("Registrierung erfolgreich – Warte auf Admin-Freischaltung.");
+    }
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        logger.info("Login attempt for email: {}", request.getEmail());
+        try {
+            // Retrieve user to check status
+            User user = authService.getUserByEmail(request.getEmail());
+            // Check if user is enabled
+            if (!user.isEnabled()) {
+                logger.warn("Login failed: Account is disabled for email: {}", request.getEmail());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErrorResponse("Account is disabled. Please contact the administrator."));
+            }
+            // Proceed with authentication
+            this.doAuthenticate(request.getEmail(), request.getPassword());
+            UserDetails userDetails = userDetailsService.loadUserByUsername(request.getEmail());
+            String token = this.helper.generateToken(userDetails);
+            LoggedInUser loggedInUser = LoggedInUser.builder()
+                    .jwtToken(token)
+                    .id(user.getId())
+                    .username(user.getUsername())
+                    .email(user.getEmail())
+                    .role(user.getRole())
+                    .enabled(user.isEnabled())
+                    .build();
+            logger.info("JWT token created for email: {}", userDetails.getUsername());
+            return new ResponseEntity<>(loggedInUser, HttpStatus.OK);
+        } catch (BadCredentialsException e) {
+            logger.error("Invalid credentials for email: {}", request.getEmail(), e);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ErrorResponse("Invalid username or password."));
+        } catch (RuntimeException e) {
+            logger.error("User not found: {}", request.getEmail(), e);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse("User not found."));
+        } catch (Exception e) {
+            logger.error("Login error for email: {}", request.getEmail(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("An error occurred during login."));
+        }
+    }
+    private void doAuthenticate(String email, String password) {
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(email, password);
+        try {
+            manager.authenticate(authentication);
+        } catch (BadCredentialsException e) {
+            throw new BadCredentialsException("Invalid Username or Password !!");
+        }
+    }
+}
+</file>
+
+<file path="src/main/java/com/peti/controller/WardrobeController.java">
+package com.peti.controller;
+
+import com.peti.model.ClothingItem;
+import com.peti.model.User;
+import com.peti.service.UserService;
+import com.peti.service.WardrobeService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+
+@Controller
+@RequestMapping("/wardrobe")
+@RequiredArgsConstructor
+public class WardrobeController {
+    
+    private final WardrobeService wardrobeService;
+    private final UserService userService;
+    
+    @GetMapping
+    public String dashboard(Model model) {
+        // Return the dashboard template without server-side data
+        // Data will be loaded via JavaScript API calls
+        return "dashboard";
+    }
+    
+    // REST API endpoints for JavaScript
+    @GetMapping("/api/items")
+    @ResponseBody
+    public ResponseEntity<List<ClothingItem>> getItems(Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        List<ClothingItem> items = wardrobeService.getUserItems(user);
+        return ResponseEntity.ok(items);
+    }
+    
+    @GetMapping("/api/items/search")
+    @ResponseBody
+    public ResponseEntity<List<ClothingItem>> searchItemsApi(@RequestParam String q, Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        List<ClothingItem> items = wardrobeService.searchItems(user, q);
+        return ResponseEntity.ok(items);
+    }
+    
+    @GetMapping("/api/items/category/{category}")
+    @ResponseBody
+    public ResponseEntity<List<ClothingItem>> getItemsByCategoryApi(@PathVariable ClothingItem.Category category,
+                                                                   Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        List<ClothingItem> items = wardrobeService.getItemsByCategory(user, category);
+        return ResponseEntity.ok(items);
+    }
+    
+    @PostMapping("/api/items/{id}/use")
+    @ResponseBody
+    public ResponseEntity<String> markItemAsUsedApi(@PathVariable Long id, Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        ClothingItem item = wardrobeService.getItemById(id)
+            .orElseThrow(() -> new RuntimeException("Item not found"));
+        
+        if (!item.getUser().getId().equals(user.getId())) {
+            return ResponseEntity.badRequest().body("Unauthorized");
+        }
+        
+        wardrobeService.markItemAsUsed(item);
+        return ResponseEntity.ok("success");
+    }
+    
+    @DeleteMapping("/api/items/{id}")
+    @ResponseBody
+    public ResponseEntity<String> deleteItemApi(@PathVariable Long id, Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        ClothingItem item = wardrobeService.getItemById(id)
+            .orElseThrow(() -> new RuntimeException("Item not found"));
+        
+        if (!item.getUser().getId().equals(user.getId())) {
+            return ResponseEntity.badRequest().body("Unauthorized");
+        }
+        
+        wardrobeService.deleteItem(id);
+        return ResponseEntity.ok("success");
+    }
+    
+    @GetMapping("/upload")
+    public String uploadForm() {
+        return "upload";
+    }
+    
+    @PostMapping("/upload")
+    public String uploadItem(@RequestParam String name,
+                            @RequestParam ClothingItem.Category category,
+                            @RequestParam(required = false) ClothingItem.Color color,
+                            @RequestParam(required = false) ClothingItem.Season season,
+                            @RequestParam(required = false) ClothingItem.Occasion occasion,
+                            @RequestParam(required = false) String description,
+                            @RequestParam(required = false) MultipartFile image,
+                            Authentication authentication) {
+        
+        User user = (User) authentication.getPrincipal();
+        
+        ClothingItem item = new ClothingItem();
+        item.setName(name);
+        item.setCategory(category);
+        item.setColor(color);
+        item.setSeason(season);
+        item.setOccasion(occasion);
+        item.setDescription(description);
+        item.setUser(user);
+        
+        // TODO: Handle image upload to Cloudinary or local storage
+        if (image != null && !image.isEmpty()) {
+            // item.setImageUrl(uploadImage(image));
+        }
+        
+        wardrobeService.addItem(item);
+        return "redirect:/wardrobe";
+    }
+    
+    @GetMapping("/search")
+    public String searchItems(@RequestParam String q, Authentication authentication, Model model) {
+        User user = (User) authentication.getPrincipal();
+        List<ClothingItem> items = wardrobeService.searchItems(user, q);
+        model.addAttribute("items", items);
+        model.addAttribute("searchTerm", q);
+        return "dashboard";
+    }
+    
+    @GetMapping("/category/{category}")
+    public String getItemsByCategory(@PathVariable ClothingItem.Category category,
+                                   Authentication authentication,
+                                   Model model) {
+        User user = (User) authentication.getPrincipal();
+        List<ClothingItem> items = wardrobeService.getItemsByCategory(user, category);
+        model.addAttribute("items", items);
+        model.addAttribute("category", category);
+        return "dashboard";
+    }
+    
+    @PostMapping("/{id}/use")
+    @ResponseBody
+    public String markItemAsUsed(@PathVariable Long id, Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        ClothingItem item = wardrobeService.getItemById(id)
+            .orElseThrow(() -> new RuntimeException("Item not found"));
+        
+        if (!item.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Unauthorized");
+        }
+        
+        wardrobeService.markItemAsUsed(item);
+        return "success";
+    }
+    
+    @DeleteMapping("/{id}")
+    @ResponseBody
+    public String deleteItem(@PathVariable Long id, Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        ClothingItem item = wardrobeService.getItemById(id)
+            .orElseThrow(() -> new RuntimeException("Item not found"));
+        
+        if (!item.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Unauthorized");
+        }
+        
+        wardrobeService.deleteItem(id);
+        return "success";
+    }
+}
+</file>
+
+<file path="src/main/java/com/peti/model/ClothingItem.java">
+package com.peti.model;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "clothing_items")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class ClothingItem {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(nullable = false)
+    private String name;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Category category;
+    
+    @Enumerated(EnumType.STRING)
+    private Color color;
+    
+    @Enumerated(EnumType.STRING)
+    private Season season;
+    
+    @Enumerated(EnumType.STRING)
+    private Occasion occasion;
+    
+    private String imageUrl;
+    
+    private String description;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+    
+    private LocalDate lastUsedDate;
+    
+    private int usageCount = 0;
+    
+    private LocalDateTime createdAt;
+    
+    private boolean isActive = true;
+    
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
+    
+    public enum Category {
+        SHIRT, PANTS, DRESS, SKIRT, JACKET, COAT, SHOES, BAG, ACCESSORY, UNDERWEAR, SOCKS
+    }
+    
+    public enum Color {
+        BLACK, WHITE, RED, BLUE, GREEN, YELLOW, PURPLE, PINK, ORANGE, BROWN, GRAY, NAVY, BEIGE, MULTI
+    }
+    
+    public enum Season {
+        SPRING, SUMMER, FALL, WINTER, ALL_SEASON
+    }
+    
+    public enum Occasion {
+        CASUAL, BUSINESS, FORMAL, SPORT, PARTY, BEACH, HIKING, SLEEP
+    }
+}
+</file>
+
+<file path="src/main/java/com/peti/model/ErrorResponse.java">
+package com.peti.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
+@AllArgsConstructor
+@Data
+public class ErrorResponse {
+    private String message;
+}
+</file>
+
+<file path="src/main/java/com/peti/model/LoggedInUser.java">
+package com.peti.model;
+
+import com.peti.constants.Role;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+public class LoggedInUser
+{
+    private String jwtToken;
+    private String email;
+    private Long id;
+    @Enumerated(EnumType.STRING)
+    private Role role;
+    private String username;
+    private boolean enabled;
+}
+</file>
+
+<file path="src/main/java/com/peti/model/Outfit.java">
+package com.peti.model;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Entity
+@Table(name = "outfits")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Outfit {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(nullable = false)
+    private String name;
+    
+    @Enumerated(EnumType.STRING)
+    private Occasion occasion;
+    
+    @Enumerated(EnumType.STRING)
+    private Season season;
+    
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "outfit_items",
+        joinColumns = @JoinColumn(name = "outfit_id"),
+        inverseJoinColumns = @JoinColumn(name = "clothing_item_id")
+    )
+    private List<ClothingItem> items;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+    
+    private LocalDate lastWornDate;
+    
+    private int wearCount = 0;
+    
+    private LocalDateTime createdAt;
+    
+    private boolean isActive = true;
+    
+    private String description;
+    
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
+    
+    public enum Occasion {
+        CASUAL, BUSINESS, FORMAL, SPORT, PARTY, BEACH, HIKING, SLEEP
+    }
+    
+    public enum Season {
+        SPRING, SUMMER, FALL, WINTER, ALL_SEASON
+    }
+}
+</file>
+
+<file path="src/main/java/com/peti/model/UsageLog.java">
+package com.peti.model;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "usage_logs")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class UsageLog {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "clothing_item_id", nullable = false)
+    private ClothingItem clothingItem;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "outfit_id")
+    private Outfit outfit;
+    
+    private LocalDate usageDate;
+    
+    private LocalDateTime createdAt;
+    
+    private String notes;
+    
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        if (usageDate == null) {
+            usageDate = LocalDate.now();
+        }
+    }
+}
+</file>
+
+<file path="src/main/java/com/peti/model/User.java">
+package com.peti.model;
+
+import com.peti.constants.Role;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
+
+@Entity
+@Table(name = "users")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class User {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(unique = true, nullable = false)
+    private String username;
+    
+    @Column(unique = true, nullable = false)
+    private String email;
+    
+    @Column(nullable = false)
+    private String password;
+    
+    @Enumerated(EnumType.STRING)
+    private Role role = Role.USER;
+
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+    
+    private boolean enabled = true;
+
+}
+</file>
+
+<file path="src/main/java/com/peti/PetiApplication.java">
+package com.peti;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
+
+@SpringBootApplication
+@EnableScheduling
+public class PetiApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(PetiApplication.class, args);
+    }
+}
+</file>
+
+<file path="src/main/java/com/peti/repository/ClothingItemRepository.java">
+package com.peti.repository;
+
+import com.peti.model.ClothingItem;
+import com.peti.model.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.time.LocalDate;
+import java.util.List;
+
+@Repository
+public interface ClothingItemRepository extends JpaRepository<ClothingItem, Long> {
+    
+    List<ClothingItem> findByUser(User user);
+    
+    List<ClothingItem> findByUserAndIsActiveTrue(User user);
+    
+    List<ClothingItem> findByUserAndCategory(User user, ClothingItem.Category category);
+    
+    List<ClothingItem> findByUserAndColor(User user, ClothingItem.Color color);
+    
+    List<ClothingItem> findByUserAndSeason(User user, ClothingItem.Season season);
+    
+    List<ClothingItem> findByUserAndOccasion(User user, ClothingItem.Occasion occasion);
+    
+    @Query("SELECT c FROM ClothingItem c WHERE c.user = :user AND c.lastUsedDate < :date OR c.lastUsedDate IS NULL")
+    List<ClothingItem> findUnusedItems(@Param("user") User user, @Param("date") LocalDate date);
+    
+    @Query("SELECT c FROM ClothingItem c WHERE c.user = :user AND c.usageCount = 0")
+    List<ClothingItem> findNeverUsedItems(@Param("user") User user);
+    
+    @Query("SELECT c FROM ClothingItem c WHERE c.user = :user AND (c.name LIKE %:searchTerm% OR c.description LIKE %:searchTerm%)")
+    List<ClothingItem> searchByUserAndTerm(@Param("user") User user, @Param("searchTerm") String searchTerm);
+}
+</file>
+
+<file path="src/main/java/com/peti/repository/OutfitRepository.java">
+package com.peti.repository;
+
+import com.peti.model.Outfit;
+import com.peti.model.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface OutfitRepository extends JpaRepository<Outfit, Long> {
+    
+    List<Outfit> findByUser(User user);
+    
+    List<Outfit> findByUserAndIsActiveTrue(User user);
+    
+    List<Outfit> findByUserAndOccasion(User user, Outfit.Occasion occasion);
+    
+    List<Outfit> findByUserAndSeason(User user, Outfit.Season season);
+}
+</file>
+
+<file path="src/main/java/com/peti/repository/UsageLogRepository.java">
+package com.peti.repository;
+
+import com.peti.model.UsageLog;
+import com.peti.model.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.time.LocalDate;
+import java.util.List;
+
+@Repository
+public interface UsageLogRepository extends JpaRepository<UsageLog, Long> {
+    
+    List<UsageLog> findByUser(User user);
+    
+    List<UsageLog> findByUserOrderByUsageDateDesc(User user);
+    
+    @Query("SELECT u FROM UsageLog u WHERE u.user = :user AND u.usageDate >= :startDate AND u.usageDate <= :endDate")
+    List<UsageLog> findByUserAndDateRange(@Param("user") User user, 
+                                         @Param("startDate") LocalDate startDate, 
+                                         @Param("endDate") LocalDate endDate);
+    
+    @Query("SELECT u FROM UsageLog u WHERE u.clothingItem.id = :itemId ORDER BY u.usageDate DESC")
+    List<UsageLog> findByClothingItemId(@Param("itemId") Long itemId);
+}
+</file>
+
+<file path="src/main/java/com/peti/repository/UserRepository.java">
+package com.peti.repository;
+
+import com.peti.model.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
+
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+    
+    Optional<User> findByUsername(String username);
+    
+    Optional<User> findByEmail(String email);
+    
+    boolean existsByUsername(String username);
+    
+    boolean existsByEmail(String email);
+}
+</file>
+
+<file path="src/main/java/com/peti/security/CustomUserDetailsService.java">
+package com.peti.security;
+
+import com.peti.model.User;
+import com.peti.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+
+import java.util.Collections;
+
+@Service
+public class CustomUserDetailsService implements UserDetailsService
+{
+    @Autowired
+    private UserRepository userRepository;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException
+    {
+        User user = userRepository.findByEmail(username).orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+        SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().name());
+
+        return new org.springframework.security.core.userdetails.User(user.getEmail(), user.getPassword(), Collections.singletonList(authority));
+    }
+}
+</file>
+
+<file path="src/main/java/com/peti/security/JwtAuthenticationEntryPoint.java">
+package com.peti.security;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+
+@Component
+public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint
+{
+    @Override
+    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException
+    {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        PrintWriter writer = response.getWriter();
+        writer.println("Access Denied !! " + authException.getMessage());
+    }
+}
+</file>
+
+<file path="src/main/java/com/peti/security/JwtAuthenticationFilter.java">
+package com.peti.security;
+
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+
+@Component
+public class JwtAuthenticationFilter extends OncePerRequestFilter
+{
+
+    private Logger logger = LoggerFactory.getLogger(OncePerRequestFilter.class);
+    @Autowired
+    private JwtHelper jwtHelper;
+
+
+    @Autowired
+    private UserDetailsService userDetailsService;
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException
+    {
+
+        String requestHeader = request.getHeader("Authorization");
+        logger.info(" Header :  {}", requestHeader);
+        String username = null;
+        String token = null;
+        if (requestHeader != null && requestHeader.startsWith("Bearer"))
+        {
+            //looking good
+            token = requestHeader.substring(7);
+            try
+            {
+
+                username = this.jwtHelper.getUsernameFromToken(token);
+
+            }
+            catch (IllegalArgumentException e)
+            {
+                logger.info("Illegal Argument while fetching the username !!");
+                e.printStackTrace();
+            }
+            catch (ExpiredJwtException e)
+            {
+                logger.info("Given jwt token is expired !!");
+                e.printStackTrace();
+            }
+            catch (MalformedJwtException e)
+            {
+                logger.info("Some changed has done in token !! Invalid Token");
+                e.printStackTrace();
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+
+            }
+
+
+        }
+        else
+        {
+            logger.info("Invalid Header Value !! ");
+        }
+
+
+        //
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null)
+        {
+
+
+            //fetch user detail from username
+            UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+            Boolean validateToken = this.jwtHelper.validateToken(token, userDetails);
+            if (validateToken)
+            {
+
+                //set the authentication
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+
+
+            }
+            else
+            {
+                logger.info("Validation fails !!");
+            }
+
+        }
+
+        filterChain.doFilter(request, response);
+    }
+}
+</file>
+
+<file path="src/main/java/com/peti/security/JwtHelper.java">
+package com.peti.security;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Component;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
+
+@Component
+public class JwtHelper
+{
+
+    //requirement :
+    public static final long JWT_TOKEN_VALIDITY = 5 * 60 * 60;
+
+    //    public static final long JWT_TOKEN_VALIDITY =  60;
+    @Value("${peti.jwt.secret}")
+    private String secret;
+
+    //retrieve username from jwt token
+    public String getUsernameFromToken(String token)
+    {
+        return getClaimFromToken(token, Claims::getSubject);
+    }
+
+    //retrieve expiration date from jwt token
+    public Date getExpirationDateFromToken(String token)
+    {
+        return getClaimFromToken(token, Claims::getExpiration);
+    }
+
+    public <T> T getClaimFromToken(String token, Function<Claims, T> claimsResolver)
+    {
+        final Claims claims = getAllClaimsFromToken(token);
+        return claimsResolver.apply(claims);
+    }
+
+    //for retrieveing any information from token we will need the secret key
+    private Claims getAllClaimsFromToken(String token)
+    {
+        return Jwts.parser().setSigningKey(secret).parseClaimsJws(token).getBody();
+    }
+
+    //check if the token has expired
+    private Boolean isTokenExpired(String token)
+    {
+        final Date expiration = getExpirationDateFromToken(token);
+        return expiration.before(new Date());
+    }
+
+    //generate token for user
+    public String generateToken(UserDetails userDetails)
+    {
+        Map<String, Object> claims = new HashMap<>();
+        return doGenerateToken(claims, userDetails.getUsername());
+    }
+
+    //while creating the token -
+    //1. Define  claims of the token, like Issuer, Expiration, Subject, and the ID
+    //2. Sign the JWT using the HS512 algorithm and secret key.
+    //3. According to JWS Compact Serialization(https://tools.ietf.org/html/draft-ietf-jose-json-web-signature-41#section-3.1)
+    //   compaction of the JWT to a URL-safe string
+    private String doGenerateToken(Map<String, Object> claims, String subject)
+    {
+
+        return Jwts.builder().setClaims(claims).setSubject(subject).setIssuedAt(new Date(System.currentTimeMillis())).setExpiration(new Date(System.currentTimeMillis() + JWT_TOKEN_VALIDITY * 1000)).signWith(SignatureAlgorithm.HS512, secret).compact();
+    }
+
+    //validate token
+    public Boolean validateToken(String token, UserDetails userDetails)
+    {
+        final String username = getUsernameFromToken(token);
+        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+    }
+
+
+}
+</file>
+
+<file path="src/main/java/com/peti/security/model/LoginRequest.java">
+package com.peti.security.model;
+
+import lombok.Data;
+
+@Data
+public class LoginRequest
+{
+    private String email;
+    private String password;
+}
+</file>
+
+<file path="src/main/java/com/peti/service/AuthService.java">
+package com.peti.service;
+
+
+import com.peti.constants.Role;
+import com.peti.model.User;
+import com.peti.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+
+@Service
+public class AuthService {
+
+    @Autowired private UserRepository userRepository;
+    @Autowired private PasswordEncoder encoder;
+//    @Autowired
+//    private SieberEngine sieberEngine;
+
+    public User register(User user) {
+        if (userRepository.existsByEmail(user.getEmail())) {
+            throw new RuntimeException("E-Mail-Address.already exists");
+        }
+        user.setPassword(encoder.encode(user.getPassword()));
+        user.setEnabled(false);
+        user.setRole(Role.USER);
+        return userRepository.save(user);
+    }
+    public User getUserByEmail(String email)
+    {
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+
+        return user;
+    }
+
+//    public void changePassword(String oldPassword, String newPassword)
+//    {
+//        User currentUser = sieberEngine.getLoggedInUser();
+//        if (!encoder.matches(oldPassword, currentUser.getPassword()))
+//        {
+//            throw new RuntimeException("Old password is incorrect");
+//        }
+//        String encodedNewPassword = encoder.encode(newPassword);
+//        currentUser.setPassword(encodedNewPassword);
+//        userRepository.save(currentUser);
+//    }
+
+
+//
+//    public List<User> getAllUsers() {
+//        return userRepository.findAll();
+//    }
+//
+//    public void approveUser(Long id) {
+//        userRepository.findById(id).ifPresent(u -> {
+//            u.setEnabled(true);
+//            userRepository.save(u);
+//        });
+//    }
+}
+</file>
+
+<file path="src/main/java/com/peti/service/UserService.java">
+package com.peti.service;
+
+import com.peti.constants.Role;
+import com.peti.model.User;
+import com.peti.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.util.Optional;
+
+@Service
+@RequiredArgsConstructor
+public class UserService {
+    
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    
+    public User registerUser(String username, String email, String password) {
+        if (userRepository.existsByUsername(username)) {
+            throw new RuntimeException("Username already exists");
+        }
+        
+        if (userRepository.existsByEmail(email)) {
+            throw new RuntimeException("Email already exists");
+        }
+        
+        User user = new User();
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setRole(Role.USER);
+        
+        return userRepository.save(user);
+    }
+    
+    public Optional<User> findByUsername(String username) {
+        return userRepository.findByUsername(username);
+    }
+    
+    public Optional<User> findByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
+    
+    public User saveUser(User user) {
+        return userRepository.save(user);
+    }
+}
+</file>
+
+<file path="src/main/java/com/peti/service/WardrobeService.java">
+package com.peti.service;
+
+import com.peti.model.ClothingItem;
+import com.peti.model.User;
+import com.peti.repository.ClothingItemRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+@Service
+@RequiredArgsConstructor
+public class WardrobeService {
+    
+    private final ClothingItemRepository clothingItemRepository;
+    
+    public ClothingItem addItem(ClothingItem item) {
+        return clothingItemRepository.save(item);
+    }
+    
+    public List<ClothingItem> getUserItems(User user) {
+        return clothingItemRepository.findByUserAndIsActiveTrue(user);
+    }
+    
+    public Optional<ClothingItem> getItemById(Long id) {
+        return clothingItemRepository.findById(id);
+    }
+    
+    public ClothingItem updateItem(ClothingItem item) {
+        return clothingItemRepository.save(item);
+    }
+    
+    public void deleteItem(Long id) {
+        ClothingItem item = clothingItemRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Item not found"));
+        item.setActive(false);
+        clothingItemRepository.save(item);
+    }
+    
+    public List<ClothingItem> searchItems(User user, String searchTerm) {
+        return clothingItemRepository.searchByUserAndTerm(user, searchTerm);
+    }
+    
+    public List<ClothingItem> getItemsByCategory(User user, ClothingItem.Category category) {
+        return clothingItemRepository.findByUserAndCategory(user, category);
+    }
+    
+    public List<ClothingItem> getItemsByColor(User user, ClothingItem.Color color) {
+        return clothingItemRepository.findByUserAndColor(user, color);
+    }
+    
+    public List<ClothingItem> getItemsBySeason(User user, ClothingItem.Season season) {
+        return clothingItemRepository.findByUserAndSeason(user, season);
+    }
+    
+    public List<ClothingItem> getItemsByOccasion(User user, ClothingItem.Occasion occasion) {
+        return clothingItemRepository.findByUserAndOccasion(user, occasion);
+    }
+    
+    public List<ClothingItem> getUnusedItems(User user, LocalDate since) {
+        return clothingItemRepository.findUnusedItems(user, since);
+    }
+    
+    public List<ClothingItem> getNeverUsedItems(User user) {
+        return clothingItemRepository.findNeverUsedItems(user);
+    }
+    
+    public void markItemAsUsed(ClothingItem item) {
+        item.setLastUsedDate(LocalDate.now());
+        item.setUsageCount(item.getUsageCount() + 1);
+        clothingItemRepository.save(item);
+    }
+}
+</file>
+
+<file path="src/main/resources/application.properties">
+# App Info
+spring.application.name=peti
+
+# MySQL DB Config
+spring.datasource.url=jdbc:mysql://localhost:3306/peti?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+spring.datasource.username=mysql
+spring.datasource.password=mysql
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+# JPA/Hibernate Config
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
+spring.jpa.properties.hibernate.format_sql=true
+
+# JWT Settings
+peti.jwt.secret=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+peti.jwt.expiration=86400000
+
+# File Upload Config
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=10MB
+
+# Thymeleaf Config
+spring.thymeleaf.cache=false
+spring.thymeleaf.prefix=classpath:/templates/
+spring.thymeleaf.suffix=.html
+
+# Server Config
+server.port=8080
+</file>
+
+<file path="src/main/resources/templates/dashboard.html">
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wardrobe - PETI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .navbar-brand {
+            font-weight: bold;
+            color: #6c5ce7 !important;
+        }
+        .card {
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .item-image {
+            height: 200px;
+            object-fit: cover;
+        }
+        .category-badge {
+            font-size: 0.8em;
+        }
+        .loading {
+            text-align: center;
+            padding: 50px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="/dashboard">
+                <i class="fas fa-tshirt me-2"></i>PETI
+            </a>
+            <div class="navbar-nav me-auto">
+                <a class="nav-link active" href="/dashboard">Wardrobe</a>
+                <a class="nav-link" href="/wardrobe/upload">Add Item</a>
+                <a class="nav-link" href="/outfits">Outfits</a>
+                <a class="nav-link" href="/reports">Reports</a>
+            </div>
+            <div class="navbar-nav">
+                <span class="nav-link">
+                    <i class="fas fa-user me-1"></i>
+                    <span id="username">User</span>
+                </span>
+                <a class="nav-link" href="#" onclick="logout()">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mt-4">
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h1 class="fw-bold text-dark">
+                    <i class="fas fa-tshirt me-2 text-primary"></i>My Wardrobe
+                </h1>
+                <p class="text-muted">Manage your clothing items and track usage</p>
+                <div id="debugInfo" class="alert alert-info" style="display: none;">
+                    <strong>Debug Info:</strong> Dashboard loaded successfully!
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="/wardrobe/upload" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Add Item
+                </a>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="d-flex">
+                    <input type="text" class="form-control me-2" id="searchInput" 
+                           placeholder="Search items...">
+                    <button type="button" class="btn btn-outline-primary" onclick="searchItems()">Search</button>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-secondary" onclick="loadAllItems()">All</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="loadItemsByCategory('SHIRT')">Shirts</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="loadItemsByCategory('PANTS')">Pants</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="loadItemsByCategory('SHOES')">Shoes</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="loadingDiv" class="loading">
+            <i class="fas fa-spinner fa-spin fa-2x text-primary mb-3"></i>
+            <p>Loading your wardrobe...</p>
+        </div>
+
+        <div id="emptyDiv" class="row" style="display: none;">
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-tshirt fa-3x text-muted mb-3"></i>
+                <h3 class="text-muted">No items found</h3>
+                <p class="text-muted">Start building your wardrobe by adding your first item!</p>
+                <a href="/wardrobe/upload" class="btn btn-primary">Add Your First Item</a>
+            </div>
+        </div>
+
+        <div id="itemsContainer" class="row" style="display: none;">
+            <!-- Items will be loaded here dynamically -->
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Check authentication on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Dashboard page loaded');
+            console.log('Current URL:', window.location.href);
+            
+            // Show debug info
+            document.getElementById('debugInfo').style.display = 'block';
+            
+            // Check for token in URL parameters (from form login)
+            const urlParams = new URLSearchParams(window.location.search);
+            const tokenFromUrl = urlParams.get('token');
+            const usernameFromUrl = urlParams.get('username');
+            
+            if (tokenFromUrl && usernameFromUrl) {
+                console.log('Token found in URL, storing in localStorage');
+                localStorage.setItem('jwt_token', tokenFromUrl);
+                localStorage.setItem('username', usernameFromUrl);
+                // Clean up URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+            
+            const token = localStorage.getItem('jwt_token');
+            const username = localStorage.getItem('username');
+            
+            console.log('Token found:', !!token);
+            console.log('Token length:', token ? token.length : 0);
+            console.log('Username found:', username);
+            
+            if (!token) {
+                // No token found, redirect to login
+                console.log('No token found, redirecting to login');
+                // Add delay to see debug info
+                // setTimeout(() => {
+                //     window.location.href = '/login.html';
+                // }, 3000);
+                return;
+            }
+            
+            // Set username in navbar
+            if (username) {
+                document.getElementById('username').textContent = username;
+                console.log('Username set in navbar:', username);
+            }
+            
+            // Load wardrobe items
+            console.log('Loading wardrobe items...');
+            loadAllItems();
+        });
+
+        function logout() {
+            // Clear stored data
+            localStorage.removeItem('jwt_token');
+            localStorage.removeItem('username');
+            
+            // Redirect to login
+            window.location.href = '/login?logout';
+        }
+
+        async function loadAllItems() {
+            await loadItems('/wardrobe/api/items');
+        }
+
+        async function loadItemsByCategory(category) {
+            await loadItems(`/wardrobe/api/items/category/${category}`);
+        }
+
+        async function searchItems() {
+            const searchTerm = document.getElementById('searchInput').value;
+            if (searchTerm.trim()) {
+                await loadItems(`/wardrobe/api/items/search?q=${encodeURIComponent(searchTerm)}`);
+            } else {
+                await loadAllItems();
+            }
+        }
+
+        async function loadItems(url) {
+            const token = localStorage.getItem('jwt_token');
+            const loadingDiv = document.getElementById('loadingDiv');
+            const emptyDiv = document.getElementById('emptyDiv');
+            const itemsContainer = document.getElementById('itemsContainer');
+
+            // Show loading
+            loadingDiv.style.display = 'block';
+            emptyDiv.style.display = 'none';
+            itemsContainer.style.display = 'none';
+
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.status === 401) {
+                    // Token expired or invalid
+                    logout();
+                    return;
+                }
+
+                const items = await response.json();
+
+                // Hide loading
+                loadingDiv.style.display = 'none';
+
+                if (items.length === 0) {
+                    emptyDiv.style.display = 'block';
+                } else {
+                    displayItems(items);
+                }
+            } catch (error) {
+                console.error('Error loading items:', error);
+                loadingDiv.style.display = 'none';
+                emptyDiv.style.display = 'block';
+            }
+        }
+
+        function displayItems(items) {
+            const itemsContainer = document.getElementById('itemsContainer');
+            itemsContainer.innerHTML = '';
+
+            items.forEach(item => {
+                const itemHtml = `
+                    <div class="col-md-4 col-lg-3 mb-4">
+                        <div class="card h-100">
+                            <div class="position-relative">
+                                ${item.imageUrl ? 
+                                    `<img src="${item.imageUrl}" class="card-img-top item-image" alt="Clothing item">` :
+                                    `<div class="card-img-top item-image bg-light d-flex align-items-center justify-content-center">
+                                        <i class="fas fa-tshirt fa-3x text-muted"></i>
+                                    </div>`
+                                }
+                                <span class="position-absolute top-0 end-0 m-2">
+                                    <span class="badge bg-primary category-badge">${item.category}</span>
+                                </span>
+                            </div>
+                            <div class="card-body">
+                                <h5 class="card-title">${item.name}</h5>
+                                <p class="card-text text-muted">${item.description || ''}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        ${item.lastUsedDate ? new Date(item.lastUsedDate).toLocaleDateString('en-US', {month: 'short', day: 'numeric'}) : 'Never used'}
+                                    </small>
+                                    <small class="text-muted">
+                                        <i class="fas fa-times me-1"></i>
+                                        ${item.usageCount} uses
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                <div class="btn-group w-100" role="group">
+                                    <button class="btn btn-outline-success btn-sm" onclick="markAsUsed(${item.id})">
+                                        <i class="fas fa-check me-1"></i>Used
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm" onclick="deleteItem(${item.id})">
+                                        <i class="fas fa-trash me-1"></i>Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                itemsContainer.innerHTML += itemHtml;
+            });
+
+            itemsContainer.style.display = 'block';
+        }
+
+        async function markAsUsed(itemId) {
+            if (confirm('Mark this item as used today?')) {
+                const token = localStorage.getItem('jwt_token');
+                try {
+                    const response = await fetch(`/wardrobe/api/items/${itemId}/use`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        loadAllItems(); // Reload items
+                    } else if (response.status === 401) {
+                        logout();
+                    }
+                } catch (error) {
+                    console.error('Error marking item as used:', error);
+                }
+            }
+        }
+
+        async function deleteItem(itemId) {
+            if (confirm('Are you sure you want to delete this item?')) {
+                const token = localStorage.getItem('jwt_token');
+                try {
+                    const response = await fetch(`/wardrobe/api/items/${itemId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        loadAllItems(); // Reload items
+                    } else if (response.status === 401) {
+                        logout();
+                    }
+                } catch (error) {
+                    console.error('Error deleting item:', error);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
+</file>
+
+<file path="src/main/resources/templates/layout.html">
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title} ? ${title} + ' - PETI' : 'PETI - Smart Virtual Wardrobe'">PETI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .navbar-brand {
+            font-weight: bold;
+            color: #6c5ce7 !important;
+        }
+        .card {
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .item-image {
+            height: 200px;
+            object-fit: cover;
+        }
+        .category-badge {
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="/wardrobe">
+                <i class="fas fa-tshirt me-2"></i>PETI
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/wardrobe">Wardrobe</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/wardrobe/upload">Add Item</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/outfits">Outfits</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/reports">Reports</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user me-1"></i>
+                            <span th:text="${#authentication.principal.username}">User</span>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/profile">Profile</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/logout">Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mt-4">
+        <div th:if="${error}" class="alert alert-danger" role="alert">
+            <span th:text="${error}"></span>
+        </div>
+        <div th:if="${success}" class="alert alert-success" role="alert">
+            <span th:text="${success}"></span>
+        </div>
+        
+        <div th:replace="${content}">
+            <!-- Content will be inserted here -->
+        </div>
+    </main>
+
+    <footer class="bg-light mt-5 py-3">
+        <div class="container text-center">
+            <p class="text-muted mb-0">&copy; 2024 PETI - Smart Virtual Wardrobe</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+</file>
+
+<file path="src/main/resources/templates/login.html">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - PETI</title>
+</head>
+<body>
+<div>
+    <div>
+        <h1>Welcome to PETI</h1>
+        <h2>Your Smart Virtual Wardrobe</h2>
+    </div>
+
+    <div>
+        <p>Registration successful! Please login.</p>
+    </div>
+
+    <div>
+        <p>Invalid credentials</p>
+    </div>
+
+    <div>
+        <form onsubmit="return handleLogin(event)">
+            <div>
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+
+            <div>
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+
+            <div>
+                <button type="submit">Login</button>
+            </div>
+        </form>
+
+        <div>
+            <p>Don't have an account?</p>
+            <a href="register.html">Register here</a>
+        </div>
+    </div>
+
+    <div>
+        <p>You have been logged out.</p>
+    </div>
+</div>
+
+<script>
+    async function handleLogin(event) {
+        event.preventDefault(); // Prevent form from submitting normally
+
+        // Get form input values
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        // Basic client-side validation
+        if (!username || !password) {
+            alert('Please fill in both username and password.');
+            return false;
+        }
+
+        try {
+            // Make API call to /api/auth/login
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            });
+
+            // Check if response is successful
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Login successful:', data);
+                alert('Login successful! Redirecting...');
+                // window.location.href = 'dashboard.html'; // Uncomment to redirect to a dashboard page
+            } else {
+                const errorData = await response.json();
+                alert(`Login failed: ${errorData.message || 'Invalid credentials'}`);
+            }
+        } catch (error) {
+            console.error('Error during login:', error);
+            alert('An error occurred while trying to log in. Please try again later.');
+        }
+
+        return false; // Prevent default form submission
+    }
+</script>
+</body>
+</html>
+</file>
+
+<file path="src/main/resources/templates/register.html">
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - PETI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+        .register-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .brand-logo {
+            font-size: 3rem;
+            color: #6c5ce7;
+        }
+        .form-control {
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            padding: 12px 15px;
+        }
+        .form-control:focus {
+            border-color: #6c5ce7;
+            box-shadow: 0 0 0 0.2rem rgba(108, 92, 231, 0.25);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 12px 30px;
+            font-weight: 600;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(108, 92, 231, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="register-card p-5">
+                    <div class="text-center mb-4">
+                        <div class="brand-logo mb-3">
+                            <i class="fas fa-tshirt"></i>
+                        </div>
+                        <h2 class="fw-bold text-dark">Join PETI</h2>
+                        <p class="text-muted">Create your smart virtual wardrobe</p>
+                    </div>
+                    
+                    <div th:if="${error}" class="alert alert-danger" role="alert">
+                        <span th:text="${error}"></span>
+                    </div>
+                    
+                    <form th:action="@{/register}" method="post">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-user"></i>
+                                </span>
+                                <input type="text" class="form-control" id="username" name="username" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-envelope"></i>
+                                </span>
+                                <input type="email" class="form-control" id="email" name="email" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="password" class="form-label">Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-lock"></i>
+                                </span>
+                                <input type="password" class="form-control" id="password" name="password" required>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-user-plus me-2"></i>Create Account
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="text-center">
+                        <p class="text-muted mb-0">Already have an account?</p>
+                        <a href="/login" class="text-decoration-none">
+                            <i class="fas fa-sign-in-alt me-1"></i>Login here
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+</file>
+
+<file path="src/main/resources/templates/upload.html">
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Item - PETI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .navbar-brand {
+            font-weight: bold;
+            color: #6c5ce7 !important;
+        }
+        .upload-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .form-control, .form-select {
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            padding: 12px 15px;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #6c5ce7;
+            box-shadow: 0 0 0 0.2rem rgba(108, 92, 231, 0.25);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 12px 30px;
+            font-weight: 600;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(108, 92, 231, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="/wardrobe">
+                <i class="fas fa-tshirt me-2"></i>PETI
+            </a>
+            <div class="navbar-nav me-auto">
+                <a class="nav-link" href="/wardrobe">Wardrobe</a>
+                <a class="nav-link active" href="/wardrobe/upload">Add Item</a>
+                <a class="nav-link" href="/outfits">Outfits</a>
+                <a class="nav-link" href="/reports">Reports</a>
+            </div>
+            <div class="navbar-nav">
+                <span class="nav-link">
+                    <i class="fas fa-user me-1"></i>
+                    <span th:text="${#authentication.principal.username}">User</span>
+                </span>
+                <a class="nav-link" href="/logout">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="upload-card p-5">
+                    <div class="text-center mb-4">
+                        <h2 class="fw-bold text-dark">
+                            <i class="fas fa-plus-circle me-2 text-primary"></i>Add New Item
+                        </h2>
+                        <p class="text-muted">Add a new clothing item to your wardrobe</p>
+                    </div>
+
+                    <form th:action="@{/wardrobe/upload}" method="post" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Item Name *</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="category" class="form-label">Category *</label>
+                            <select class="form-select" id="category" name="category" required>
+                                <option value="">Select category</option>
+                                <option value="SHIRT">Shirt</option>
+                                <option value="PANTS">Pants</option>
+                                <option value="DRESS">Dress</option>
+                                <option value="SKIRT">Skirt</option>
+                                <option value="JACKET">Jacket</option>
+                                <option value="COAT">Coat</option>
+                                <option value="SHOES">Shoes</option>
+                                <option value="BAG">Bag</option>
+                                <option value="ACCESSORY">Accessory</option>
+                                <option value="UNDERWEAR">Underwear</option>
+                                <option value="SOCKS">Socks</option>
+                            </select>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="color" class="form-label">Color</label>
+                                    <select class="form-select" id="color" name="color">
+                                        <option value="">Select color</option>
+                                        <option value="BLACK">Black</option>
+                                        <option value="WHITE">White</option>
+                                        <option value="RED">Red</option>
+                                        <option value="BLUE">Blue</option>
+                                        <option value="GREEN">Green</option>
+                                        <option value="YELLOW">Yellow</option>
+                                        <option value="PURPLE">Purple</option>
+                                        <option value="PINK">Pink</option>
+                                        <option value="ORANGE">Orange</option>
+                                        <option value="BROWN">Brown</option>
+                                        <option value="GRAY">Gray</option>
+                                        <option value="NAVY">Navy</option>
+                                        <option value="BEIGE">Beige</option>
+                                        <option value="MULTI">Multi</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="season" class="form-label">Season</label>
+                                    <select class="form-select" id="season" name="season">
+                                        <option value="">Select season</option>
+                                        <option value="SPRING">Spring</option>
+                                        <option value="SUMMER">Summer</option>
+                                        <option value="FALL">Fall</option>
+                                        <option value="WINTER">Winter</option>
+                                        <option value="ALL_SEASON">All Season</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="occasion" class="form-label">Occasion</label>
+                            <select class="form-select" id="occasion" name="occasion">
+                                <option value="">Select occasion</option>
+                                <option value="CASUAL">Casual</option>
+                                <option value="BUSINESS">Business</option>
+                                <option value="FORMAL">Formal</option>
+                                <option value="SPORT">Sport</option>
+                                <option value="PARTY">Party</option>
+                                <option value="BEACH">Beach</option>
+                                <option value="HIKING">Hiking</option>
+                                <option value="SLEEP">Sleep</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3" 
+                                      placeholder="Describe your item (optional)"></textarea>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="image" class="form-label">Image</label>
+                            <input type="file" class="form-control" id="image" name="image" 
+                                   accept="image/*">
+                            <div class="form-text">Upload an image of your clothing item (optional)</div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Add Item
+                            </button>
+                            <a href="/wardrobe" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Wardrobe
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+</file>
+
+</files>
